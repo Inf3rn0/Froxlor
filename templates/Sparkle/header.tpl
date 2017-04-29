@@ -59,6 +59,7 @@
 			<li><a href="{$linker->getLink(array('section' => 'index'))}">{$lng['panel']['dashboard']}</a></li>
 			<li><a href="#">{$lng['panel']['options']}&nbsp;&#x25BE;</a>
 				<ul>
+					<li><a href="{$linker->getLink(array('section' => 'index', 'page' => 'setup_2fa'))}">{$lng['panel']['setup2fa']}</a></li>
 					<li><a href="{$linker->getLink(array('section' => 'index', 'page' => 'change_password'))}">{$lng['login']['password']}</a></li>
 					<li><a href="{$linker->getLink(array('section' => 'index', 'page' => 'change_language'))}">{$lng['login']['language']}</a></li>
 					<if Settings::Get('panel.allow_theme_change_admin') == '1' && $userinfo['adminsession'] == 1>

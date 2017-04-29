@@ -243,6 +243,75 @@ if ($page == 'overview') {
 		eval("echo \"" . getTemplate('index/change_theme') . "\";");
 	}
 
+//Add 2FA
+} elseif ($page == 'setup_2fa') {
+        $default_theme = Settings::Get('panel.default_theme');
+        if ($userinfo['theme'] != '') {
+                $default_theme = $userinfo['theme'];
+        }
+
+	if (isset($_POST['send']) && $_POST['send'] == 'send') {
+		$tfa_active = $_POST['2fa_active'];
+                $tfa_secret = $_POST['2fa_secret'];
+		if ($tfa_active == 'on') {
+			$tfa_active = '1';
+		} else {
+			$tfa_active = '0';
+			$tfa_secret = '';
+		}
+                $stmt = Database::prepare("UPDATE `" . TABLE_PANEL_CUSTOMERS . "`
+                        SET `2fa_active` = :2fa_active, `2fa_secret` = :2fa_secret
+                        WHERE `customerid` = :customerid"
+                );
+                Database::pexecute($stmt, array("2fa_active" => $tfa_active, "2fa_secret" => $tfa_secret, "customerid" => $userinfo['customerid']));
+                $log->logAction(USR_ACTION, LOG_NOTICE, '2fa-config saved');
+
+                redirectTo($filename, array('s' => $s));
+
+	} else {
+		//init clean session
+		$row = '';
+		$tfa_active = '0';
+             	$tfa_activec = 'unchecked';
+             	$tfa_secret = '';
+
+		//load external files
+                $ga = new PHPGangsta_GoogleAuthenticator();
+
+		//load info from database
+                $log->logAction(USR_ACTION, LOG_NOTICE, "viewed customer_index::setup_2fa");
+
+                $result_stmt = Database::prepare("SELECT `2fa_active`, `2fa_secret`, `loginname` FROM `" . TABLE_PANEL_CUSTOMERS . "` WHERE `customerid`= :customerid");
+                Database::pexecute($result_stmt, array("customerid" => $userinfo['customerid']));
+                $row = $result_stmt->fetch(PDO::FETCH_ASSOC);
+
+		if ($row['2fa_active'] == '1') {
+			$tfa_active = '1';
+			$tfa_activec = 'checked';
+               		$tfa_secret = $row['2fa_secret'];
+		} else {
+			$tfa_secret = $ga->createSecret();
+		}
+
+		$qrCodeUrl = $ga->getQRCodeGoogleUrl($row['loginname'] . '@panel.infnet.nl', $tfa_secret);
+
+		$qrImage_data = file_get_contents($qrCodeUrl);
+		$qrImage = 'data:image/png;base64,' . base64_encode($qrImage_data);
+
+		$oneCode = $ga->getCode($tfa_secret);
+		$checkResult = $ga->verifyCode($tfa_secret, $oneCode, 1);
+		if ($checkResult) {
+		    $verCode = 'Code verified and accepted!';
+		} else {
+		    $verCode = 'Code invalid, check hosts date/time!';
+		}
+
+		// Display page
+		eval("echo \"" . getTemplate('index/setup_2fa') . "\";");
+	}
+//Add 2FA
+//End
+
 } elseif ($page == 'send_error_report' && Settings::Get('system.allow_error_report_customer') == '1') {
 
 	// only show this if we really have an exception to report

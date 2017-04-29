@@ -20,6 +20,120 @@
 define('AREA', 'login');
 require './lib/init.php';
 
+//Add action to display second login
+if ($action == 'ask2fa') {
+
+        $loginname = validate($_POST['loginname'], 'loginname');
+	if ($loginname == '') {
+		$loginname = $_GET['loginname'];
+	}
+
+	//If submit was pressed from second login
+	if (isset($_POST['send']) && $_POST['send'] == 'send') {
+                $passcode = validate($_POST['pc'], 'pc');
+
+                $gb = new PHPGangsta_GoogleAuthenticator();
+
+                $userinfo_stmt = Database::prepare("SELECT * FROM `" . TABLE_PANEL_CUSTOMERS . "` WHERE `loginname`= :loginname" );
+                Database::pexecute($userinfo_stmt, array("loginname" => $loginname));
+                $userinfo = $userinfo_stmt->fetch(PDO::FETCH_ASSOC);
+
+		$oneCode = $gb->getCode($userinfo['2fa_secret']);
+
+		//Check if calculated code matches inputted - if not, redisplay with error
+		if ($oneCode !== $passcode) {
+                	redirectTo('index.php', array('loginname' => $loginname, 'action' => 'ask2fa', 'showmessage' => '9'));
+                } else {
+			// 2FA Authenticated
+                        $uid = 'customerid';
+                        $userinfo['userid'] = $userinfo[$uid];
+			$userinfo['adminsession'] = '0';
+
+			// Ripped from further down
+			$s = md5(uniqid(microtime(), 1));
+
+                        if (isset($_POST['language'])) {
+                                $language = validate($_POST['language'], 'language');
+                                if ($language == 'profile') {
+                                        $language = $userinfo['def_language'];
+                                } elseif (!isset($languages[$language])) {
+                                        $language = Settings::Get('panel.standardlanguage');
+                                }
+                        } else {
+                                $language = Settings::Get('panel.standardlanguage');
+                        }
+
+                        if (isset($userinfo['theme']) && $userinfo['theme'] != '') {
+                                $theme = $userinfo['theme'];
+                        } else {
+                                $theme = Settings::Get('panel.default_theme');
+                        }
+
+                        if (Settings::Get('session.allow_multiple_login') != '1') {
+                                $stmt = Database::prepare("DELETE FROM `" . TABLE_PANEL_SESSIONS . "`
+                                        WHERE `userid` = :uid
+                                        AND `adminsession` = :adminsession"
+                                );
+                                Database::pexecute($stmt, array("uid" => $userinfo['userid'], "adminsession" => $userinfo['adminsession']));
+                        }
+
+                        $theme_field = false;
+                        $stmt = Database::query("SHOW COLUMNS FROM panel_sessions LIKE 'theme'");
+                        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                if ($row['Field'] == "theme") {
+                                        $has_theme = true;
+                                }
+                        }
+
+                        $params = array(
+                                "hash" => $s,
+                                "userid" => $userinfo['userid'],
+                                "ipaddress" => $remote_addr,
+                                "useragent" => $http_user_agent,
+                                "lastactivity" => time(),
+                                "language" => $language,
+                                "adminsession" => $userinfo['adminsession']
+                        );
+
+                        if ($has_theme) {
+                                $params["theme"] = $theme;
+                                $stmt = Database::prepare("INSERT INTO `" . TABLE_PANEL_SESSIONS . "`
+                                        (`hash`, `userid`, `ipaddress`, `useragent`, `lastactivity`, `language`, `adminsession`, `theme`)
+                                        VALUES (:hash, :userid, :ipaddress, :useragent, :lastactivity, :language, :adminsession, :theme)"
+                                );
+                        } else {
+                                $stmt = Database::prepare("INSERT INTO `" . TABLE_PANEL_SESSIONS . "`
+                                        (`hash`, `userid`, `ipaddress`, `useragent`, `lastactivity`, `language`, `adminsession`)
+                                        VALUES (:hash, :userid, :ipaddress, :useragent, :lastactivity, :language, :adminsession)"
+                                );
+                        }
+                        Database::pexecute($stmt, $params);
+
+
+                        $qryparams = array();
+                        if (isset($_POST['qrystr']) && $_POST['qrystr'] != "") {
+                                parse_str(urldecode($_POST['qrystr']), $qryparams);
+                        }
+                        $qryparams['s'] = $s;
+
+                      	if (isset($_POST['script']) && $_POST['script'] != "") {
+                                redirectTo($_POST['script'], $qryparams);
+                      	} else {
+                               	redirectTo('customer_index.php', $qryparams);
+                        }
+
+			//End of rip
+		}
+
+	} else {
+		//Display 2fa login
+		if (isset($_GET['showmessage']) && $_GET['showmessage'] == '9') { $message = $lng['2fa']['wrongcode']; }
+		$loginname = $_GET['loginname'];
+                eval("echo \"" . getTemplate('login_2fa') . "\";");
+	}
+}
+// End of add
+
 if ($action == '') {
 	$action = 'login';
 }
@@ -133,8 +247,15 @@ if ($action == 'login') {
 		              WHERE `$uid`= :uid"
 		        );
 		        Database::pexecute($stmt, array("lastlogin_succ" => time(), "uid" => $userinfo[$uid]));
-		        $userinfo['userid'] = $userinfo[$uid];
-		        $userinfo['adminsession'] = $adminsession;
+			$userinfo['userid'] = $userinfo[$uid];
+			$userinfo['adminsession'] = $adminsession;
+
+				// Hook in after user/pass auth to check for 2fa
+		               	if ($userinfo['2fa_active'] == '1') {
+					redirectTo('index.php', array('loginname' => $loginname, 'action' => 'ask2fa', 'send' => '0'));
+				}
+				// End of hook
+
 		    }
 		} else {
 			// login incorrect

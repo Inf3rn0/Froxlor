@@ -2074,3 +2074,13 @@ $lng['admin']['domain_ocsp_stapling']['description'] = 'See <a target="_blank" h
 $lng['admin']['domain_ocsp_stapling']['nginx_version_warning'] = '<br /><strong class="red">WARNING:</strong> Nginx version 1.3.7 or above is required for OCSP stapling. If your version is older, the webserver will NOT start correctly while OCSP stapling is enabled!';
 $lng['serversettings']['ssl']['apache24_ocsp_cache_path']['title'] = 'Apache 2.4: path to the OCSP stapling cache';
 $lng['serversettings']['ssl']['apache24_ocsp_cache_path']['description'] = 'Configures the cache used to store OCSP responses which get included in TLS handshakes.';
+
+//Added for 2FA
+$lng['panel']['setup2fa'] = '2FAConfig';
+$lng['2fa']['title'] = '2-Factor Auth configuration';
+$lng['2fa']['active'] = 'Check to activate';
+$lng['2fa']['secret'] = 'Secret';
+$lng['2fa']['cancel'] = 'Close and return to previous page';
+$lng['2fa']['save'] = 'Save above settings';
+$lng['2fa']['logincode'] = '2FA passcode';
+$lng['2fa']['wrongcode'] = '2-Factor authentication enabled for user.<br>Passcode not supplied or invalid.<br>Please try again.';

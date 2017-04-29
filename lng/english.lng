@@ -1,0 +1,9 @@
+//Added by myself - 2FA
+$lng['panel']['setup2fa'] = '2FAConfig';
+$lng['2fa']['title'] = '2-Factor Auth configuration';
+$lng['2fa']['active'] = 'Check to activate';
+$lng['2fa']['secret'] = 'Secret';
+$lng['2fa']['cancel'] = 'Close and return to previous page';
+$lng['2fa']['save'] = 'Save above settings';
+$lng['2fa']['logincode'] = '2FA passcode';
+$lng['2fa']['wrongcode'] = '2-Factor authentication enabled for user.<br>Passcode not supplied or invalid.<br>Please try again.';
